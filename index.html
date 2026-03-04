@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Пазл Севы</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    #game-container {
+      position: relative;
+      margin-top: 20px;
+      user-select: none;
+    }
+
+    #puzzle {
+      border: 2px solid #333;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 1px;
+      background: #333;
+    }
+
+    .tile {
+      width: 100px;
+      height: 100px;
+      background-image: url("seva.jpg");
+      background-size: 400px 400px; /* 4*100 */
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .empty {
+      background: #222;
+      cursor: default;
+    }
+
+    #controls {
+      margin-top: 15px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    button {
+      padding: 8px 14px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Пазл по рисунку Севы</h1>
+  <p>Перетаскивай фрагменты рядом с пустой клеткой и собери картинку целиком.</p>
+
+  <div id="game-container">
+    <div id="puzzle"></div>
+  </div>
+
+  <div id="controls">
+    <button id="shuffleBtn">Перемешать / начать заново</button>
+    <div>Ходы: <span id="moves">0</span></div>
+  </div>
+
+  <script>
+    const size = 4;                 // 4x4
+    const tileSize = 100;           // пикселей
+    const puzzle = document.getElementById('puzzle');
+    const movesSpan = document.getElementById('moves');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+
+    let tiles = [];                 // массив индексов 0..15, последний — пустой
+    let emptyIndex;                 // индекс пустой клетки
+    let moves = 0;
+
+    // создаём DOM‑плитки
+    function createTiles() {
+      puzzle.innerHTML = '';
+      puzzle.style.width = (size * tileSize + (size - 1)) + 'px';
+      puzzle.style.height = (size * tileSize + (size - 1)) + 'px';
+
+      for (let i = 0; i < size * size; i++) {
+        const tile = document.createElement('div');
+        tile.classList.add('tile');
+        tile.dataset.index = i;
+        tile.addEventListener('click', onTileClick);
+        puzzle.appendChild(tile);
+      }
+    }
+
+    // позиционирование фона для конкретного фрагмента
+    function setTileBackground(tile, value) {
+      if (value === size * size - 1) {
+        tile.classList.add('empty');
+        tile.style.backgroundImage = 'none';
+      } else {
+        tile.classList.remove('empty');
+        const x = (value % size) * -tileSize;
+        const y = Math.floor(value / size) * -tileSize;
+        tile.style.backgroundImage = 'url("seva.jpg")';
+        tile.style.backgroundPosition = `${x}px ${y}px`;
+      }
+    }
+
+    // выставить тайлы согласно массиву tiles
+    function drawTiles() {
+      const tileNodes = puzzle.children;
+      for (let i = 0; i < tiles.length; i++) {
+        setTileBackground(tileNodes[i], tiles[i]);
+      }
+    }
+
+    // создать собранное состояние
+    function createSolved() {
+      tiles = [];
+      for (let i = 0; i < size * size; i++) {
+        tiles.push(i);
+      }
+      emptyIndex = tiles.length - 1;
+    }
+
+    // проверка соседства с пустой
+    function isNeighbor(i, j) {
+      const ix = i % size, iy = Math.floor(i / size);
+      const jx = j % size, jy = Math.floor(j / size);
+      return (Math.abs(ix - jx) + Math.abs(iy - jy)) === 1;
+    }
+
+    // перемешка гарантированно достижимым способом
+    function shuffleTiles(steps = 200) {
+      for (let k = 0; k < steps; k++) {
+        const neighbors = [];
+        for (let i = 0; i < tiles.length; i++) {
+          if (isNeighbor(i, emptyIndex)) neighbors.push(i);
+        }
+        const r = neighbors[Math.floor(Math.random() * neighbors.length)];
+        [tiles[r], tiles[emptyIndex]] = [tiles[emptyIndex], tiles[r]];
+        emptyIndex = r;
+      }
+    }
+
+    // обработка клика по плитке
+    function onTileClick(e) {
+      const tileElem = e.currentTarget;
+      const index = Number(tileElem.dataset.index);
+      if (!isNeighbor(index, emptyIndex)) return;
+
+      // поменять с пустой
+      [tiles[index], tiles[emptyIndex]] = [tiles[emptyIndex], tiles[index]];
+      emptyIndex = index;
+      moves++;
+      movesSpan.textContent = moves;
+      drawTiles();
+
+      if (isSolved()) {
+        setTimeout(() => alert('Молодец! Пазл собран!'), 10);
+      }
+    }
+
+    // проверка победы
+    function isSolved() {
+      for (let i = 0; i < tiles.length; i++) {
+        if (tiles[i] !== i) return false;
+      }
+      return true;
+    }
+
+    // старт / рестарт
+    function startGame() {
+      moves = 0;
+      movesSpan.textContent = moves;
+      createSolved();
+      shuffleTiles();   // ВАЖНО: сразу перемешиваем
+      drawTiles();
+    }
+
+    // инициализация
+    createTiles();
+    startGame();
+
+    shuffleBtn.addEventListener('click', startGame);
+  </script>
+</body>
+</html>
